@@ -152,8 +152,8 @@ public class DBUtils {
 					+ "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);");
 			s.setInt(1, Global.ProjectID);  //projectID
 			s.setString(2, "ADD"); //action
-			s.setString(3, ""); // uuid
-			s.setInt(4, 0); //orgID
+			s.setString(3, "d7abce2b-4304-4530-9559-8a380c482b4b"); // uuid
+			s.setInt(4, 23); //orgID
 			s.setString(5, "Incident"); //type
 			s.setString(6, data.getId()); //title
 			s.setString(7, data.getAddr() + " " + data.getDesc()); // Description
@@ -185,8 +185,9 @@ public class DBUtils {
 		String Name = "";
 		
 		try {
-			s = conn.prepareStatement("SELECT Name FROM incidents WHERE Name = ?");
+			s = conn.prepareStatement("SELECT Name FROM incidents WHERE Name = ? and projectID = ?");
 			s.setString(1,data.getId());
+			s.setInt(2,  Global.ProjectID);
 			if (s.execute()) {
 				ResultSet rs = s.getResultSet();
 				if (rs.next()) {
@@ -198,7 +199,7 @@ public class DBUtils {
 			return Name;
 
 		} catch (Exception ex) {
-			System.out.println("Query error in entryExists: " + ex);
+			System.out.println("Query error in getEntry: " + ex);
 			return Name;
 		}
 	}
@@ -209,8 +210,10 @@ public class DBUtils {
 		//logger.debug("Checking if entry exists: " + id);
 		PreparedStatement s;
 		try {
-			s = conn.prepareStatement("SELECT * FROM incidents WHERE Name = ?");
+			s = conn.prepareStatement("SELECT * FROM incidents WHERE Name = ? and projectID = ? and State = ?");
 			s.setString(1, id);
+			s.setInt(2, Global.ProjectID);
+			s.setString(3, "Active");
 			boolean result = false;
 			if (s.execute()) {
 				ResultSet rs = s.getResultSet();
@@ -261,12 +264,14 @@ public class DBUtils {
 		PreparedStatement s;
 		try {
 			// Expire the geofence first
-						s = conn.prepareStatement("UPDATE geofence set active=0 where geofenceID=(SELECT geofenceID from incidents where Name=?)");
+						s = conn.prepareStatement("UPDATE geofence set active=0 where geofenceID=(SELECT geofenceID from incidents where Name=? and projectID = ?)");
 						s.setString(1, id);
+						s.setInt(2, Global.ProjectID);
 						s.executeUpdate();
 						
-			s = conn.prepareStatement("UPDATE incidents set State='Inactive', LastUpdatedBy='LVPD DBUtils' WHERE Name = ?");
+			s = conn.prepareStatement("UPDATE incidents set State='Inactive', LastUpdatedBy='LVPD DBUtils' WHERE Name = ? and projectID = ?");
 			s.setString(1, id);
+			s.setInt(2, Global.ProjectID);
 			s.executeUpdate();
 			
 			
