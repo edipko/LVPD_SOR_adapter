@@ -207,10 +207,11 @@ public class DBUtils {
 
 
 	public boolean entryExists(String id) {
-		//logger.debug("Checking if entry exists: " + id);
+		logger.debug("Checking if entry exists: " + id);
 		PreparedStatement s;
 		try {
 			s = conn.prepareStatement("SELECT * FROM incidents WHERE Name = ? and projectID = ? and State = ?");
+			//s = conn.prepareStatement("SELECT * FROM incidents WHERE Name = ? and projectID = ?");
 			s.setString(1, id);
 			s.setInt(2, Global.ProjectID);
 			s.setString(3, "Active");
@@ -264,30 +265,31 @@ public class DBUtils {
 		PreparedStatement s;
 		try {
 			// Expire the geofence first
-						s = conn.prepareStatement("UPDATE geofence set active=0 where geofenceID=(SELECT geofenceID from incidents where Name=? and projectID = ?)");
-						s.setString(1, id);
-						s.setInt(2, Global.ProjectID);
-						s.executeUpdate();
-						
-			s = conn.prepareStatement("UPDATE incidents set State='Inactive', LastUpdatedBy='LVPD DBUtils' WHERE Name = ? and projectID = ?");
+			// Get the geofenceID first
+			s = conn.prepareStatement("SELECT geofenceID, incidentID FROM incidents WHERE Name=? and projectID=?");
 			s.setString(1, id);
 			s.setInt(2, Global.ProjectID);
+			int geofenceID=0;
+			int incidentID=0;
+			if (s.execute()) {
+				ResultSet rs = s.getResultSet();
+				rs.next();
+				geofenceID = rs.getInt(1);
+				incidentID = rs.getInt(2);
+				rs.close();
+			}
+			s = conn.prepareStatement("UPDATE geofence set active=0 where geofenceID=?");
+			s.setInt(1, geofenceID);
+			s.executeUpdate();
+						
+			s = conn.prepareStatement("UPDATE incidents set State='Inactive', LastUpdatedBy='LVPD DBUtils' WHERE incidentID=?");
+			s.setInt(1, incidentID);
 			s.executeUpdate();
 			
 			
 			// Add entry to the Uicds/XCore table if needed
 			if (isXCoreProject(Global.ProjectID)) {
-				int incidentID = 0;
-				s = conn.prepareStatement("SELECT incidentID FROM incidents WHERE Name=?");
-				s.setString(1, id);
-				if (s.execute()) {
-					ResultSet rs = s.getResultSet();
-					rs.next();
-					incidentID = rs.getInt(1);
-					rs.close();
-				}
-				if (incidentID > 0) {
-					
+				if (incidentID > 0) {				
 					java.text.SimpleDateFormat sdf2 = 
 						     new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 					String now = sdf2.format(new Date());
@@ -358,8 +360,6 @@ public class DBUtils {
 			}
 
 			s.close();
-
-			logger.debug("All Done");
 			
 		} catch (Exception ex) {
 			ex.printStackTrace();

@@ -222,22 +222,22 @@ public class ParseLVPD {
 					   if (gl.getLatitude() != null) {
 						  _incident.setLatitude(gl.getLatitude());
 						  _incident.setLongitude(gl.getLongitude());
-						
+						  	
+						// Create the new Geofence and Incident
+							db.insertGeofence(_incident);
+							db.insertIncident(_incident);
+							
+							// Need to add to XCore Adapter
+							if (useXcore) {
+								logger.debug("Adding to XCore table");
+								db.insertXCore(_incident);
+							}
 					   } else {
 						   // We did not get a location, so skip this entry
-						   logger.debug("Not location returned for address: "
+						   logger.debug("No location returned for address: "
 								+ tds.get(4).text());
 					   }
-					   
-					// Create the new Geofence and Incident
-						db.insertGeofence(_incident);
-						db.insertIncident(_incident);
-						
-						// Need to add to XCore Adapter
-						if (useXcore) {
-							logger.debug("Adding to XCore table");
-							db.insertXCore(_incident);
-						}
+					    
 					}
 					
 					// Add the data to a list we can loop through to delete old
