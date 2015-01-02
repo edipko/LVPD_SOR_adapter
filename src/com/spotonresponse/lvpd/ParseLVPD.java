@@ -36,16 +36,15 @@ public class ParseLVPD {
 
 	private static DBUtils db = null;
 	private static boolean useXcore = false;
-	
+
 	public static void sleep(int time) {
 		try {
-			Thread.sleep(time);                 //1000 milliseconds is one second.
-		} catch(InterruptedException ex) {
-		    Thread.currentThread().interrupt();
+			Thread.sleep(time); // 1000 milliseconds is one second.
+		} catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
 		}
 	}
-	    
-	
+
 	public static void main(String[] args) {
 
 		/*
@@ -66,7 +65,7 @@ public class ParseLVPD {
 		Properties prop = new Properties();
 		db = new DBUtils();
 		int timer = 60000;
-		
+
 		try {
 			// load a properties file
 			prop.load(new FileInputStream(propertiesFile));
@@ -87,12 +86,11 @@ public class ParseLVPD {
 			String dbURL = prop.getProperty("DBurl");
 
 			timer = Integer.valueOf(prop.getProperty("SecondsBetweenRuns")) * 1000;
-			
+
 			db.setUserName(dbUser);
 			db.setPassword(dbPass);
 			db.setURL(dbURL);
 			db.getConnection();
-			
 
 		} catch (IOException ex) {
 			logger.fatal("Error setting properties");
@@ -106,10 +104,10 @@ public class ParseLVPD {
 			while (true) {
 				// Determine if we should update the XCore table
 				useXcore = db.isXCoreProject(Global.ProjectID);
-				
+
 				// Process the data
 				getData(url);
-				
+
 				// Sleep until next run
 				sleep(timer);
 			}
@@ -134,7 +132,8 @@ public class ParseLVPD {
 		URI uri = null;
 		try {
 			uri = new URI("http", "maps.google.com", "/maps/api/geocode/xml",
-					"address=" + address + ", Las Vegas, NV" + "&sensor=false", null);
+					"address=" + address + ", Las Vegas, NV" + "&sensor=false",
+					null);
 			String geurl = uri.toASCIIString();
 			long start = System.currentTimeMillis();
 
@@ -186,25 +185,20 @@ public class ParseLVPD {
 		Document doc = null;
 		try {
 			doc = Jsoup.connect(url).get();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		// Make sure we have a good Database connection
+
+			// Make sure we have a good Database connection
 			if (!db.checkConnection()) {
 				db.getConnection();
 			}
-		
 
-		Element table = doc.getElementById("dnn_ctr1018_View_gvTraffic");
-		Elements trs = table.getElementsByTag("tr");
-		ArrayList<Incident> incidentList = new ArrayList<Incident>();
+			Element table = doc.getElementById("dnn_ctr1018_View_gvTraffic");
+			Elements trs = table.getElementsByTag("tr");
+			ArrayList<Incident> incidentList = new ArrayList<Incident>();
 
-		for (Element tr : trs) {
-			Elements tds = tr.getElementsByTag("td");
-			if (tds.size() > 1) {
-				
+			for (Element tr : trs) {
+				Elements tds = tr.getElementsByTag("td");
+				if (tds.size() > 1) {
+
 					Incident _incident = new Incident();
 
 					_incident.setId(tds.get(0).text());
@@ -217,38 +211,43 @@ public class ParseLVPD {
 					// re-geocode
 					// if is exists
 					if (!db.entryExists(_incident.getId())) {
-					   GeoLocation gl = getGeoLocation(tds.get(4).text());
-					   if (gl.getLatitude() != null) {
-						  _incident.setLatitude(gl.getLatitude());
-						  _incident.setLongitude(gl.getLongitude());
-						  	
-						// Create the new Geofence and Incident
+						GeoLocation gl = getGeoLocation(tds.get(4).text());
+						if (gl.getLatitude() != null) {
+							_incident.setLatitude(gl.getLatitude());
+							_incident.setLongitude(gl.getLongitude());
+
+							// Create the new Geofence and Incident
 							db.insertGeofence(_incident);
 							db.insertIncident(_incident);
-							
+
 							// Need to add to XCore Adapter
 							if (useXcore) {
 								logger.debug("Adding to XCore table");
 								db.insertXCore(_incident);
 							}
-					   } else {
-						   // We did not get a location, so skip this entry
-						   logger.debug("No location returned for address: "
-								+ tds.get(4).text());
-					   }
-					    
+						} else {
+							// We did not get a location, so skip this entry
+							logger.debug("No location returned for address: "
+									+ tds.get(4).text());
+						}
+
 					}
-					
+
 					// Add the data to a list we can loop through to delete old
 					incidentList.add(_incident);
-							
-				}
-				
-		}
-		
-		// Use the created list to expire incidents that have left the list
-		db.checkExpiration(incidentList);
-	}
 
+				}
+
+			}
+
+			// Use the created list to expire incidents that have left the list
+			db.checkExpiration(incidentList);
+
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
 
 }
