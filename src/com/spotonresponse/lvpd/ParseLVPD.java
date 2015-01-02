@@ -203,8 +203,7 @@ public class ParseLVPD {
 
 		for (Element tr : trs) {
 			Elements tds = tr.getElementsByTag("td");
-			if (tds.size() > 0) {
-				//logger.debug("Entry is: " + tds.get(0).text());
+			if (tds.size() > 1) {
 				
 					Incident _incident = new Incident();
 
