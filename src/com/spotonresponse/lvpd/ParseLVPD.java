@@ -173,6 +173,8 @@ public class ParseLVPD {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (java.lang.NumberFormatException e) {
+			e.printStackTrace();
 		} catch (XPathExpressionException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
