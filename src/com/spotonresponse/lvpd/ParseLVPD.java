@@ -37,6 +37,8 @@ public class ParseLVPD {
 	private static DBUtils db = null;
 	private static boolean useXcore = false;
 
+	private static int MAX_DB_RUNS = 300;
+	
 	public static void sleep(int time) {
 		try {
 			Thread.sleep(time); // 1000 milliseconds is one second.
@@ -90,7 +92,7 @@ public class ParseLVPD {
 			db.setUserName(dbUser);
 			db.setPassword(dbPass);
 			db.setURL(dbURL);
-			db.getConnection();
+			//db.getConnection();
 
 		} catch (IOException ex) {
 			logger.fatal("Error setting properties");
@@ -101,13 +103,39 @@ public class ParseLVPD {
 		try {
 			// String url = args[0];
 			String url = "http://www.lvmpd.com/News/CurrentTraffic/tabid/450/Default.aspx";
+			int db_run = 0;
 			while (true) {
+				
+				/*
+				 * The open/close database in this loop was added to try and prevent a java heap error
+				 * After so long (a few days of running, the program would throw an exception
+				 *    Exception in thread "main" java.lang.OutOfMemoryError: Java heap space
+				 * The thought is to allow the connection to remain open for some amount of runs
+				 * Then close and re-open as needed to eliminate this exception.  I am not sure this is
+				 *   the correct solution, so it should be looked at further
+				 */
+				
+				if (db_run > MAX_DB_RUNS) {
+					// Close the database connection
+					db.close();
+					
+					// Get a database connection
+					db.getConnection();
+					
+					// Reset counter
+					db_run = 0;
+				}
+				
+				
 				// Determine if we should update the XCore table
 				useXcore = db.isXCoreProject(Global.ProjectID);
 
 				// Process the data
 				getData(url);
-
+	
+				// Increment DB run counter
+				db_run++;
+				
 				// Sleep until next run
 				sleep(timer);
 			}
